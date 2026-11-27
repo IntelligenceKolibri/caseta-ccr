@@ -63,6 +63,10 @@ class SheetStore:
             try:
                 w = self.sh.worksheet(t)
             except self.gs.WorksheetNotFound:
+                if t not in TABS:
+                    nombres = ", ".join(f"«{x.title}»" for x in self.sh.worksheets())
+                    raise RuntimeError(f"No encontré la hoja «{t}» en tu Bitácora. Las hojas que existen son: {nombres}. "
+                                       f"Pon el nombre exacto en los Secrets como bitacora_hoja.")
                 w = self.sh.add_worksheet(t, rows=500, cols=len(TABS[t]))
                 rows = [TABS[t]] + (SEED_USUARIOS if t == "Usuarios caseta" else [])
                 w.update(values=rows, range_name="A1")
