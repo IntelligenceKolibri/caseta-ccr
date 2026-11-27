@@ -1,0 +1,7 @@
+streamlit>=1.52
+pandas
+gspread>=6.0
+requests
+opencv-python-headless
+numpy
+tzdata
