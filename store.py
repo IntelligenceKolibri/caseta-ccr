@@ -89,9 +89,15 @@ class SheetStore:
         return pd.DataFrame([r[:len(h)] for r in rows], columns=h)
 
     def append(self, t, row: dict):
-        h = self.header(t)
-        self.ws(t).append_row([row.get(c, "") for c in h], value_input_option="USER_ENTERED",
-                              table_range="A1")
+        """Escribe siempre en la primera fila libre después del último ID (aunque haya huecos)."""
+        from gspread.utils import rowcol_to_a1
+        h, w = self.header(t), self.ws(t)
+        ids = w.col_values(1)                     # columna A (ID) hasta el último valor
+        r = len(ids) + 1
+        if r > w.row_count:
+            w.add_rows(max(100, r - w.row_count))
+        rng = f"A{r}:{rowcol_to_a1(r, len(h))}"
+        w.update(values=[[row.get(c, "") for c in h]], range_name=rng, value_input_option="USER_ENTERED")
 
     def update(self, t, key_col, key, changes: dict):
         w, h = self.ws(t), self.header(t)
@@ -111,11 +117,18 @@ class SheetStore:
 
 def get_store(secrets):
     import json
+    keys = [k for k in ("bitacora_url", "gcp_json", "gcp_service_account") if k in secrets]
+    if not keys:
+        return LocalStore()  # sin Secrets: modo prueba
+    if "bitacora_url" not in secrets:
+        raise RuntimeError("Falta 'bitacora_url' en los Secrets (la liga de tu Bitácora Vehicular).")
+    if "gcp_json" not in secrets and "gcp_service_account" not in secrets:
+        raise RuntimeError("Falta 'gcp_json' en los Secrets (el contenido del archivo JSON del robot).")
     try:
-        if "bitacora_url" in secrets and ("gcp_json" in secrets or "gcp_service_account" in secrets):
-            info = json.loads(secrets["gcp_json"]) if "gcp_json" in secrets else secrets["gcp_service_account"]
-            return SheetStore(info, secrets["bitacora_url"], secrets.get("bitacora_hoja", "Hoja 1"))
+        info = json.loads(secrets["gcp_json"]) if "gcp_json" in secrets else dict(secrets["gcp_service_account"])
+    except Exception:
+        raise RuntimeError("El 'gcp_json' de los Secrets no se pudo leer: revisa que pegaste el JSON completo entre las triples comillas.")
+    try:
+        return SheetStore(info, secrets["bitacora_url"], secrets.get("bitacora_hoja", "Hoja 1"))
     except Exception as e:
-        print("Sheets no disponible:", e)
-        raise
-    return LocalStore()
+        raise RuntimeError(f"No pude abrir tu Bitácora. ¿La compartiste como Editor con {info.get('client_email')}? Detalle: {e}")
