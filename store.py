@@ -136,3 +136,23 @@ def get_store(secrets):
         return SheetStore(info, secrets["bitacora_url"], secrets.get("bitacora_hoja", "Hoja 1"))
     except Exception as e:
         raise RuntimeError(f"No pude abrir tu Bitácora. ¿La compartiste como Editor con {info.get('client_email')}? Detalle: {e}")
+
+
+def casas_residentes(secrets):
+    """Lista de casas de la hoja Usuarios (Aplicación CCR) para el buscador de la caseta."""
+    import json
+    if "residentes_url" not in secrets:
+        if os.path.exists("data/residentes.csv"):
+            return sorted({c for c in pd.read_csv("data/residentes.csv", dtype=str, keep_default_na=False)["Casa"] if c})
+        return []
+    import gspread
+    info = json.loads(secrets["gcp_json"]) if "gcp_json" in secrets else dict(secrets["gcp_service_account"])
+    w = gspread.service_account_from_dict(info).open_by_url(secrets["residentes_url"]).worksheet(
+        secrets.get("residentes_hoja", "Usuarios"))
+    vals = w.get_all_values()
+    if not vals:
+        return []
+    h = [x.strip().lower() for x in vals[0]]
+    i = h.index("casa") if "casa" in h else 2
+    return sorted({r[i].strip() for r in vals[1:] if len(r) > i and r[i].strip() and r[i].strip().lower() != "caseta"},
+                  key=lambda c: (c.split(" ")[0], [int(n) for n in __import__("re").findall(r"\d+", c)] or [0], c))
