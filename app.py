@@ -10,7 +10,7 @@ import streamlit as st
 
 
 # ───── datos (antes store.py) ─────
-"""Datos de la caseta: Google Sheets (Bitácora Vehicular) o CSV local para pruebas."""
+# Datos de la caseta: Google Sheets (Bitácora Vehicular) o CSV local para pruebas.
 import os
 import pandas as pd
 
@@ -173,7 +173,7 @@ def casas_residentes(secrets):
 # ───── fotos (antes fotos.py) ─────
 import base64, os, requests
 class fotos:
-    """Sube fotos a tu carpeta de Google Drive mediante un Apps Script (corre con tu cuenta)."""
+    # Sube fotos a tu carpeta de Google Drive mediante un Apps Script (corre con tu cuenta).
     import base64
     import os
 
